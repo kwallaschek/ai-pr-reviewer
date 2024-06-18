@@ -22,8 +22,6 @@ import {getTokenCount} from './tokenizer'
 const context = github_context
 const repo = context.repo
 
-const ignoreKeyword = '@coderabbitai: ignore'
-
 export const codeReview = async (
   lightBot: Bot,
   heavyBot: Bot,
@@ -55,12 +53,6 @@ export const codeReview = async (
     inputs.description = commenter.getDescription(
       context.payload.pull_request.body
     )
-  }
-
-  // if the description contains ignore_keyword, skip
-  if (inputs.description.includes(ignoreKeyword)) {
-    info('Skipped: description contains ignore_keyword')
-    return
   }
 
   // as gpt-3.5-turbo isn't paying attention to system message, add to inputs for now
@@ -719,9 +711,6 @@ ${
 ### Code suggestions
 - The bot may make code suggestions, but please review them carefully before committing since the line number ranges may be misaligned. 
 - You can edit the comment made by the bot and manually tweak the suggestion if it is slightly off.
-
-### Pausing incremental reviews
-- Add \`@coderabbitai: ignore\` anywhere in the PR description to pause further reviews from the bot.
 
 </details>
 `
