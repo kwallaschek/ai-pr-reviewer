@@ -717,7 +717,7 @@ ${
 - Invite the bot into a review comment chain by tagging \`@coderabbitai\` in a reply.
 
 ### Code suggestions
-- The bot may make code suggestions, but please review them carefully before committing since the line number ranges may be misaligned. 
+- The bot may make code suggestions, but please review them carefully before committing since the line number ranges may be misaligned.
 - You can edit the comment made by the bot and manually tweak the suggestion if it is slightly off.
 
 ### Pausing incremental reviews
@@ -739,8 +739,11 @@ ${
     )
   }
 
-  // post the final summary comment
-  await commenter.comment(`${summarizeComment}`, SUMMARIZE_TAG, 'replace')
+  if (!options.disableReviewSummary){
+    // post the final summary comment
+    await commenter.comment(`${summarizeComment}`, SUMMARIZE_TAG, 'replace')
+  }
+
 }
 
 const splitPatch = (patch: string | null | undefined): string[] => {
