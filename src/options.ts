@@ -6,6 +6,7 @@ export class Options {
   debug: boolean
   disableReview: boolean
   disableReleaseNotes: boolean
+  disableReleaseSummary: boolean
   maxFiles: number
   reviewSimpleChanges: boolean
   reviewCommentLGTM: boolean
@@ -27,6 +28,7 @@ export class Options {
     debug: boolean,
     disableReview: boolean,
     disableReleaseNotes: boolean,
+    disableReleaseSummary: boolean,
     maxFiles = '0',
     reviewSimpleChanges = false,
     reviewCommentLGTM = false,
@@ -45,6 +47,7 @@ export class Options {
     this.debug = debug
     this.disableReview = disableReview
     this.disableReleaseNotes = disableReleaseNotes
+    this.disableReleaseSummary = disableReleaseSummary
     this.maxFiles = parseInt(maxFiles)
     this.reviewSimpleChanges = reviewSimpleChanges
     this.reviewCommentLGTM = reviewCommentLGTM
@@ -68,6 +71,7 @@ export class Options {
     info(`debug: ${this.debug}`)
     info(`disable_review: ${this.disableReview}`)
     info(`disable_release_notes: ${this.disableReleaseNotes}`)
+    info(`disable_release_summary: ${this.disableReleaseSummary}`)
     info(`max_files: ${this.maxFiles}`)
     info(`review_simple_changes: ${this.reviewSimpleChanges}`)
     info(`review_comment_lgtm: ${this.reviewCommentLGTM}`)
