@@ -739,7 +739,7 @@ ${
     )
   }
 
-  if (!options.disableReviewSummary){
+  if (!options.disableReleaseSummary){
     // post the final summary comment
     await commenter.comment(`${summarizeComment}`, SUMMARIZE_TAG, 'replace')
   }
