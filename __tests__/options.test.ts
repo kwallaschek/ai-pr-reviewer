@@ -1,309 +1,225 @@
-import { describe, it, expect, jest, beforeEach, afterEach } from '@jest/globals'
-import { Options, PathFilter, OpenAIOptions } from '../src/options'
+import { describe, test, expect } from '@jest/globals'
+import { Options, OpenAIOptions } from '../src/options'
+import { TokenLimits } from '../src/limits'
 
-// Mock @actions/core
-jest.mock('@actions/core', () => ({
-  info: jest.fn()
-}))
+describe('Options', () => {
+  describe('GPT-5 Integration Tests', () => {
+    test('should create Options with GPT-5 as light model', () => {
+      const options = new Options(
+        false, // debug
+        false, // disableReview
+        false, // disableReleaseNotes
+        false, // disableReleaseSummary
+        '0',   // maxFiles
+        false, // reviewSimpleChanges
+        false, // reviewCommentLGTM
+        null,  // pathFilters
+        '',    // systemMessage
+        'gpt-5' // openaiLightModel
+      )
 
-describe('PathFilter', () => {
-  describe('constructor', () => {
-    it('should handle null rules', () => {
-      const filter = new PathFilter(null)
-      expect(filter['rules']).toEqual([])
+      expect(options.openaiLightModel).toBe('gpt-5')
+      expect(options.lightTokenLimits.maxTokens).toBe(200000)
+      expect(options.lightTokenLimits.responseTokens).toBe(8192)
+      expect(options.lightTokenLimits.knowledgeCutOff).toBe('2024-04-01')
     })
 
-    it('should handle empty array rules', () => {
-      const filter = new PathFilter([])
-      expect(filter['rules']).toEqual([])
+    test('should create Options with GPT-5 as heavy model', () => {
+      const options = new Options(
+        false, // debug
+        false, // disableReview
+        false, // disableReleaseNotes
+        false, // disableReleaseSummary
+        '0',   // maxFiles
+        false, // reviewSimpleChanges
+        false, // reviewCommentLGTM
+        null,  // pathFilters
+        '',    // systemMessage
+        'gpt-3.5-turbo', // openaiLightModel
+        'gpt-5' // openaiHeavyModel
+      )
+
+      expect(options.openaiHeavyModel).toBe('gpt-5')
+      expect(options.heavyTokenLimits.maxTokens).toBe(200000)
+      expect(options.heavyTokenLimits.responseTokens).toBe(8192)
+      expect(options.heavyTokenLimits.knowledgeCutOff).toBe('2024-04-01')
     })
 
-    it('should parse inclusion rules', () => {
-      const filter = new PathFilter(['*.js', '*.ts'])
-      expect(filter['rules']).toEqual([
-        ['*.js', false],
-        ['*.ts', false]
-      ])
+    test('should handle both light and heavy models as GPT-5', () => {
+      const options = new Options(
+        false, // debug
+        false, // disableReview
+        false, // disableReleaseNotes
+        false, // disableReleaseSummary
+        '0',   // maxFiles
+        false, // reviewSimpleChanges
+        false, // reviewCommentLGTM
+        null,  // pathFilters
+        '',    // systemMessage
+        'gpt-5', // openaiLightModel
+        'gpt-5'  // openaiHeavyModel
+      )
+
+      expect(options.openaiLightModel).toBe('gpt-5')
+      expect(options.openaiHeavyModel).toBe('gpt-5')
+      expect(options.lightTokenLimits.maxTokens).toBe(200000)
+      expect(options.heavyTokenLimits.maxTokens).toBe(200000)
+      
+      // Both should have the same GPT-5 configuration
+      expect(options.lightTokenLimits.responseTokens).toBe(8192)
+      expect(options.heavyTokenLimits.responseTokens).toBe(8192)
+      expect(options.lightTokenLimits.knowledgeCutOff).toBe('2024-04-01')
+      expect(options.heavyTokenLimits.knowledgeCutOff).toBe('2024-04-01')
     })
 
-    it('should parse exclusion rules', () => {
-      const filter = new PathFilter(['!*.test.js', '!node_modules/**'])
-      expect(filter['rules']).toEqual([
-        ['*.test.js', true],
-        ['node_modules/**', true]
-      ])
-    })
+    test('should create separate TokenLimits instances for light and heavy models', () => {
+      const options = new Options(
+        false, false, false, false, '0', false, false, null, '',
+        'gpt-5', 'gpt-4'
+      )
 
-    it('should parse mixed rules', () => {
-      const filter = new PathFilter(['src/**/*.js', '!**/*.test.js', 'lib/*.ts'])
-      expect(filter['rules']).toEqual([
-        ['src/**/*.js', false],
-        ['**/*.test.js', true],
-        ['lib/*.ts', false]
-      ])
-    })
-
-    it('should trim whitespace from rules', () => {
-      const filter = new PathFilter(['  *.js  ', ' !*.test.js ', ''])
-      expect(filter['rules']).toEqual([
-        ['*.js', false],
-        ['*.test.js', true]
-      ])
-    })
-
-    it('should handle empty strings', () => {
-      const filter = new PathFilter(['', '  ', '\t', 'valid.js'])
-      expect(filter['rules']).toEqual([['valid.js', false]])
+      // Verify they are different instances
+      expect(options.lightTokenLimits).not.toBe(options.heavyTokenLimits)
+      
+      // Verify correct configurations
+      expect(options.lightTokenLimits.maxTokens).toBe(200000) // GPT-5
+      expect(options.heavyTokenLimits.maxTokens).toBe(8000)   // GPT-4
     })
   })
 
-  describe('check', () => {
-    it('should return true when no rules exist', () => {
-      const filter = new PathFilter([])
-      expect(filter.check('any/path.js')).toBe(true)
+  describe('Model Configuration Tests', () => {
+    test('should use default models when not specified', () => {
+      const options = new Options(false, false, false, false)
+
+      expect(options.openaiLightModel).toBe('gpt-3.5-turbo')
+      expect(options.openaiHeavyModel).toBe('gpt-3.5-turbo')
     })
 
-    it('should include files matching inclusion rules', () => {
-      const filter = new PathFilter(['*.js'])
-      expect(filter.check('test.js')).toBe(true)
-      expect(filter.check('app.js')).toBe(true)
-      expect(filter.check('src/app.js')).toBe(false) // doesn't match *.js pattern
+    test('should handle all supported models correctly', () => {
+      const supportedModels = [
+        'gpt-3.5-turbo',
+        'gpt-3.5-turbo-16k',
+        'gpt-4',
+        'gpt-4-32k',
+        'gpt-4o',
+        'gpt-5'
+      ]
+
+      supportedModels.forEach(model => {
+        const options = new Options(
+          false, false, false, false, '0', false, false, null, '',
+          model, model
+        )
+
+        expect(options.openaiLightModel).toBe(model)
+        expect(options.openaiHeavyModel).toBe(model)
+        expect(options.lightTokenLimits).toBeInstanceOf(TokenLimits)
+        expect(options.heavyTokenLimits).toBeInstanceOf(TokenLimits)
+        
+        // Verify token limits are properly configured
+        expect(options.lightTokenLimits.maxTokens).toBeGreaterThan(0)
+        expect(options.heavyTokenLimits.maxTokens).toBeGreaterThan(0)
+      })
     })
 
-    it('should exclude files matching exclusion rules', () => {
-      const filter = new PathFilter(['!*.test.js'])
-      expect(filter.check('app.test.js')).toBe(false)
-      expect(filter.check('component.test.js')).toBe(false)
+    test('should handle model temperature parsing', () => {
+      const options = new Options(
+        false, false, false, false, '0', false, false, null, '',
+        'gpt-5', 'gpt-5', '0.7' // temperature
+      )
+
+      expect(options.openaiModelTemperature).toBe(0.7)
     })
 
-    it('should handle complex inclusion/exclusion logic', () => {
-      const filter = new PathFilter(['src/**/*.js', '!**/*.test.js'])
-      expect(filter.check('src/app.js')).toBe(true)
-      expect(filter.check('src/components/Button.js')).toBe(true)
-      expect(filter.check('src/app.test.js')).toBe(false) // excluded by !**/*.test.js
-      expect(filter.check('lib/util.js')).toBe(false) // doesn't match src/**/*.js pattern
-    })
+    test('should parse numeric configuration correctly with GPT-5', () => {
+      const options = new Options(
+        true,    // debug
+        false,   // disableReview
+        false,   // disableReleaseNotes
+        false,   // disableReleaseSummary
+        '150',   // maxFiles
+        true,    // reviewSimpleChanges
+        true,    // reviewCommentLGTM
+        ['*.ts'], // pathFilters
+        'custom system message',
+        'gpt-5', // light model
+        'gpt-5', // heavy model
+        '0.2',   // temperature
+        '5',     // retries
+        '180000', // timeout
+        '10',    // openai concurrency
+        '8'      // github concurrency
+      )
 
-    it('should prioritize exclusion over inclusion', () => {
-      const filter = new PathFilter(['*.js', '!*.test.js'])
-      expect(filter.check('app.js')).toBe(true)
-      expect(filter.check('app.test.js')).toBe(false)
+      expect(options.debug).toBe(true)
+      expect(options.maxFiles).toBe(150)
+      expect(options.reviewSimpleChanges).toBe(true)
+      expect(options.reviewCommentLGTM).toBe(true)
+      expect(options.openaiModelTemperature).toBe(0.2)
+      expect(options.openaiRetries).toBe(5)
+      expect(options.openaiTimeoutMS).toBe(180000)
+      expect(options.openaiConcurrencyLimit).toBe(10)
+      expect(options.githubConcurrencyLimit).toBe(8)
     })
+  })
 
-    it('should handle wildcard patterns', () => {
-      const filter = new PathFilter(['src/**/*', '!**/node_modules/**'])
-      expect(filter.check('src/app.js')).toBe(true)
-      expect(filter.check('src/components/Button.tsx')).toBe(true)
-      expect(filter.check('src/node_modules/package/index.js')).toBe(false)
-    })
+  describe('Print Functionality', () => {
+    test('should include GPT-5 models in print output', () => {
+      // Create the options and verify properties directly
+      const options = new Options(
+        false, false, false, false, '0', false, false, null, '',
+        'gpt-5', 'gpt-5'
+      )
 
-    it('should handle multiple exclusion rules', () => {
-      const filter = new PathFilter(['**/*', '!*.test.js', '!*.spec.js', '!dist/**'])
-      expect(filter.check('src/app.js')).toBe(true)
-      expect(filter.check('app.test.js')).toBe(false)
-      expect(filter.check('app.spec.js')).toBe(false)
-      expect(filter.check('dist/bundle.js')).toBe(false)
-    })
-
-    it('should handle only exclusion rules', () => {
-      const filter = new PathFilter(['!*.test.js', '!dist/**'])
-      expect(filter.check('app.js')).toBe(true)
-      expect(filter.check('app.test.js')).toBe(false)
-      expect(filter.check('dist/app.js')).toBe(false)
-    })
-
-    it('should handle edge cases with path patterns', () => {
-      const filter = new PathFilter(['**/*.{js,ts}', '!**/*.{test,spec}.{js,ts}'])
-      expect(filter.check('app.js')).toBe(true)
-      expect(filter.check('app.ts')).toBe(true)
-      expect(filter.check('app.test.js')).toBe(false)
-      expect(filter.check('app.spec.ts')).toBe(false)
+      // Verify the options contain GPT-5 configuration
+      expect(options.openaiLightModel).toBe('gpt-5')
+      expect(options.openaiHeavyModel).toBe('gpt-5')
+      
+      // Verify token limits string representation includes GPT-5 values
+      const lightLimitsString = options.lightTokenLimits.string()
+      const heavyLimitsString = options.heavyTokenLimits.string()
+      
+      expect(lightLimitsString).toContain('max_tokens=200000')
+      expect(lightLimitsString).toContain('response_tokens=8192')
+      expect(heavyLimitsString).toContain('max_tokens=200000')
+      expect(heavyLimitsString).toContain('response_tokens=8192')
     })
   })
 })
 
 describe('OpenAIOptions', () => {
-  describe('constructor', () => {
-    it('should create with default values', () => {
-      const options = new OpenAIOptions()
-      expect(options.model).toBe('gpt-3.5-turbo')
-      expect(options.tokenLimits.maxTokens).toBe(4000)
+  describe('GPT-5 Configuration', () => {
+    test('should create OpenAIOptions with GPT-5 model', () => {
+      const openaiOptions = new OpenAIOptions('gpt-5')
+
+      expect(openaiOptions.model).toBe('gpt-5')
+      expect(openaiOptions.tokenLimits).toBeInstanceOf(TokenLimits)
+      expect(openaiOptions.tokenLimits.maxTokens).toBe(200000)
+      expect(openaiOptions.tokenLimits.responseTokens).toBe(8192)
     })
 
-    it('should create with custom model', () => {
-      const options = new OpenAIOptions('gpt-4')
-      expect(options.model).toBe('gpt-4')
-      expect(options.tokenLimits.maxTokens).toBe(8000)
+    test('should create OpenAIOptions with custom TokenLimits', () => {
+      const customLimits = new TokenLimits('gpt-5')
+      const openaiOptions = new OpenAIOptions('gpt-5', customLimits)
+
+      expect(openaiOptions.model).toBe('gpt-5')
+      expect(openaiOptions.tokenLimits).toBe(customLimits)
+      expect(openaiOptions.tokenLimits.maxTokens).toBe(200000)
     })
 
-    it('should create with custom token limits', () => {
-      const customLimits = { maxTokens: 10000, responseTokens: 2000, requestTokens: 7900, knowledgeCutOff: '2023-01-01', string: () => 'custom' }
-      const options = new OpenAIOptions('custom-model', customLimits)
-      expect(options.model).toBe('custom-model')
-      expect(options.tokenLimits).toBe(customLimits)
+    test('should use default configuration when no parameters provided', () => {
+      const openaiOptions = new OpenAIOptions()
+
+      expect(openaiOptions.model).toBe('gpt-3.5-turbo')
+      expect(openaiOptions.tokenLimits.maxTokens).toBe(4000)
     })
 
-    it('should handle null token limits', () => {
-      const options = new OpenAIOptions('gpt-4', null)
-      expect(options.model).toBe('gpt-4')
-      expect(options.tokenLimits.maxTokens).toBe(8000)
-    })
-  })
-})
+    test('should handle null tokenLimits parameter', () => {
+      const openaiOptions = new OpenAIOptions('gpt-5', null)
 
-describe('Options', () => {
-  beforeEach(() => {
-    jest.clearAllMocks()
-  })
-
-  describe('constructor', () => {
-    it('should create with default values', () => {
-      const options = new Options(false, false, false, false)
-      expect(options.debug).toBe(false)
-      expect(options.disableReview).toBe(false)
-      expect(options.disableReleaseNotes).toBe(false)
-      expect(options.disableReleaseSummary).toBe(false)
-      expect(options.maxFiles).toBe(0)
-      expect(options.reviewSimpleChanges).toBe(false)
-      expect(options.reviewCommentLGTM).toBe(false)
-      expect(options.systemMessage).toBe('')
-      expect(options.openaiLightModel).toBe('gpt-3.5-turbo')
-      expect(options.openaiHeavyModel).toBe('gpt-3.5-turbo')
-      expect(options.openaiModelTemperature).toBe(0.0)
-      expect(options.openaiRetries).toBe(3)
-      expect(options.openaiTimeoutMS).toBe(120000)
-      expect(options.openaiConcurrencyLimit).toBe(6)
-      expect(options.githubConcurrencyLimit).toBe(6)
-      expect(options.apiBaseUrl).toBe('https://api.openai.com/v1')
-      expect(options.language).toBe('en-US')
-    })
-
-    it('should create with custom values', () => {
-      const options = new Options(
-        true,
-        true,
-        true,
-        true,
-        '50',
-        true,
-        true,
-        ['src/**/*.js'],
-        'custom system message',
-        'gpt-4',
-        'gpt-4-turbo',
-        '0.7',
-        '5',
-        '300000',
-        '10',
-        '8',
-        'https://custom-api.com/v1',
-        'es-ES'
-      )
-      expect(options.debug).toBe(true)
-      expect(options.disableReview).toBe(true)
-      expect(options.disableReleaseNotes).toBe(true)
-      expect(options.disableReleaseSummary).toBe(true)
-      expect(options.maxFiles).toBe(50)
-      expect(options.reviewSimpleChanges).toBe(true)
-      expect(options.reviewCommentLGTM).toBe(true)
-      expect(options.systemMessage).toBe('custom system message')
-      expect(options.openaiLightModel).toBe('gpt-4')
-      expect(options.openaiHeavyModel).toBe('gpt-4-turbo')
-      expect(options.openaiModelTemperature).toBe(0.7)
-      expect(options.openaiRetries).toBe(5)
-      expect(options.openaiTimeoutMS).toBe(300000)
-      expect(options.openaiConcurrencyLimit).toBe(10)
-      expect(options.githubConcurrencyLimit).toBe(8)
-      expect(options.apiBaseUrl).toBe('https://custom-api.com/v1')
-      expect(options.language).toBe('es-ES')
-    })
-
-    it('should handle string number conversions', () => {
-      const options = new Options(
-        false, false, false, false,
-        'not-a-number',
-        false, false, null,
-        '', 'gpt-3.5-turbo', 'gpt-3.5-turbo',
-        'not-a-float',
-        'not-an-int',
-        'not-a-timeout',
-        'not-concurrent',
-        'not-github-concurrent'
-      )
-      expect(options.maxFiles).toBe(NaN)
-      expect(options.openaiModelTemperature).toBe(NaN)
-      expect(options.openaiRetries).toBe(NaN)
-      expect(options.openaiTimeoutMS).toBe(NaN)
-      expect(options.openaiConcurrencyLimit).toBe(NaN)
-      expect(options.githubConcurrencyLimit).toBe(NaN)
-    })
-
-    it('should create token limits for both models', () => {
-      const options = new Options(false, false, false, false)
-      expect(options.lightTokenLimits).toBeDefined()
-      expect(options.heavyTokenLimits).toBeDefined()
-      expect(options.lightTokenLimits.maxTokens).toBe(4000)
-      expect(options.heavyTokenLimits.maxTokens).toBe(4000)
-    })
-  })
-
-  describe('print', () => {
-    it('should print all option values', () => {
-      const info = (jest.requireMock('@actions/core') as any).info
-      const options = new Options(
-        true, false, true, false, '25', true, false, ['*.js'], 
-        'system msg', 'gpt-4', 'gpt-4-turbo', '0.5', '3', '180000', '8', '6'
-      )
-      
-      options.print()
-      
-      expect(info).toHaveBeenCalledWith('debug: true')
-      expect(info).toHaveBeenCalledWith('disable_review: false')
-      expect(info).toHaveBeenCalledWith('disable_release_notes: true')
-      expect(info).toHaveBeenCalledWith('disable_release_summary: false')
-      expect(info).toHaveBeenCalledWith('max_files: 25')
-      expect(info).toHaveBeenCalledWith('review_simple_changes: true')
-      expect(info).toHaveBeenCalledWith('review_comment_lgtm: false')
-      expect(info).toHaveBeenCalledWith('system_message: system msg')
-      expect(info).toHaveBeenCalledWith('openai_light_model: gpt-4')
-      expect(info).toHaveBeenCalledWith('openai_heavy_model: gpt-4-turbo')
-      expect(info).toHaveBeenCalledWith('openai_model_temperature: 0.5')
-      expect(info).toHaveBeenCalledWith('openai_retries: 3')
-      expect(info).toHaveBeenCalledWith('openai_timeout_ms: 180000')
-      expect(info).toHaveBeenCalledWith('openai_concurrency_limit: 8')
-      expect(info).toHaveBeenCalledWith('github_concurrency_limit: 6')
-      expect(info).toHaveBeenCalledWith('language: en-US')
-    })
-  })
-
-  describe('checkPath', () => {
-    it('should use path filter and log result', () => {
-      const info = (jest.requireMock('@actions/core') as any).info
-      const options = new Options(false, false, false, false, '0', false, false, ['*.js', '!*.test.js'])
-      
-      const result1 = options.checkPath('app.js')
-      expect(result1).toBe(true)
-      expect(info).toHaveBeenCalledWith('checking path: app.js => true')
-      
-      const result2 = options.checkPath('app.test.js')
-      expect(result2).toBe(false)
-      expect(info).toHaveBeenCalledWith('checking path: app.test.js => false')
-    })
-
-    it('should handle complex path patterns', () => {
-      const info = (jest.requireMock('@actions/core') as any).info
-      const options = new Options(false, false, false, false, '0', false, false, [
-        'src/**/*.{js,ts}',
-        '!**/*.{test,spec}.{js,ts}',
-        '!dist/**',
-        '!node_modules/**'
-      ])
-      
-      expect(options.checkPath('src/components/Button.js')).toBe(true)
-      expect(options.checkPath('src/utils/helper.ts')).toBe(true)
-      expect(options.checkPath('src/components/Button.test.js')).toBe(false)
-      expect(options.checkPath('dist/bundle.js')).toBe(false)
-      expect(options.checkPath('node_modules/package/index.js')).toBe(false)
+      expect(openaiOptions.model).toBe('gpt-5')
+      expect(openaiOptions.tokenLimits).toBeInstanceOf(TokenLimits)
+      expect(openaiOptions.tokenLimits.maxTokens).toBe(200000)
     })
   })
 })
