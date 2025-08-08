@@ -100,4 +100,6 @@ process
     warning(`Uncaught Exception thrown: ${e}, backtrace: ${e.stack}`)
   })
 
-await run()
+run().catch(error => {
+  setFailed(`Unhandled error: ${error}`)
+})
