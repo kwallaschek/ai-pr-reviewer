@@ -13,7 +13,7 @@ We recommend installing the Pro version from [CodeRabbit](http://coderabbit.ai).
 ## Overview
 
 CodeRabbit `ai-pr-reviewer` is an AI-based code reviewer and summarizer for
-GitHub pull requests using OpenAI's `gpt-3.5-turbo` and `gpt-4` models. It is
+GitHub pull requests using OpenAI's `gpt-3.5-turbo`, `gpt-4`, and `gpt-5` models. It is
 designed to be used as a GitHub Action and can be configured to run on every
 pull request and review comments
 
@@ -108,14 +108,17 @@ jobs:
   OpenAI API if you have multiple. Please add this key to your GitHub Action
   secrets.
 
-### Models: `gpt-4` and `gpt-3.5-turbo`
+### Models: `gpt-5`, `gpt-4`, and `gpt-3.5-turbo`
 
 Recommend using `gpt-3.5-turbo` for lighter tasks such as summarizing the
-changes (`openai_light_model` in configuration) and `gpt-4` for more complex
+changes (`openai_light_model` in configuration) and `gpt-4` or `gpt-5` for more complex
 review and commenting tasks (`openai_heavy_model` in configuration).
 
+**Supported models:** `gpt-3.5-turbo`, `gpt-3.5-turbo-16k`, `gpt-4`, `gpt-4-32k`, `gpt-4o`, `gpt-5`
+
 Costs: `gpt-3.5-turbo` is dirt cheap. `gpt-4` is orders of magnitude more
-expensive, but the results are vastly superior. We are typically spending $20 a
+expensive, but the results are vastly superior. `gpt-5` offers even better performance 
+with improved reasoning capabilities. We are typically spending $20 a
 day for a 20 developer team with `gpt-4` based review and commenting.
 
 ### Prompts & Configuration

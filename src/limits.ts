@@ -18,6 +18,10 @@ export class TokenLimits {
     } else if (model === 'gpt-4o') {
       this.maxTokens = 128000;
       this.responseTokens = 4096;
+    } else if (model === 'gpt-5') {
+      this.maxTokens = 200000;
+      this.responseTokens = 8192;
+      this.knowledgeCutOff = '2024-04-01';
     } else {
       this.maxTokens = 4000
       this.responseTokens = 1000
