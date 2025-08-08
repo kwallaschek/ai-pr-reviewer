@@ -33,7 +33,7 @@ jobs:
         with:
           debug: true
           review_comment_lgtm: false
-          openai_heavy_model: gpt-4  # You can use gpt-5 for improved performance
+          openai_heavy_model: gpt-5  # You can use gpt-5 for improved performance
           path_filters: |
             !dist/**
             !**/*.lock
